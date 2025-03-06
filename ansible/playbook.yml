@@ -1,0 +1,53 @@
+- name: Configure Ubuntu Server
+  hosts: all
+  become: yes
+  tasks:
+    - name: Update system
+      apt:
+        update_cache: yes
+        upgrade: dist
+
+    - name: Install required packages
+      apt:
+        name:
+          - nginx
+          - openssh-server
+        state: present
+
+    - name: Configure SSH to listen only on external interface
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^ListenAddress'
+        line: '180.180.180.1'
+      notify:
+        - Restart SSH
+
+    - name: Configure firewall rules
+      ufw:
+        rule: allow
+        port: "22"
+        proto: tcp
+        from: any
+
+    - name: Allow HTTP
+      ufw:
+        rule: allow
+        port: "80"
+        proto: tcp
+
+    - name: Allow access from internal device on port 9000
+      ufw:
+        rule: allow
+        port: "9000"
+        proto: tcp
+        from: "10.200.16.100"
+
+    - name: Enable UFW
+      ufw:
+        state: enabled
+
+  handlers:
+    - name: Restart SSH
+      service:
+        name: ssh
+        state: restarted
